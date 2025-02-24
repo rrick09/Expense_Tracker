@@ -1,0 +1,213 @@
+import datetime
+import csv
+import json
+
+# Initialize transactions dictionary and categories list
+transactions = []  # Stores user transactions
+categories = ["Food", "Substances", "Entertainment", "Transport", "Household", "Recurrent Expenses",
+              "Shopping"]  # Default categories
+budget = 0  # Start with zero budget; user must manually add money  # Default budget value
+bank_statement = {}  # Dictionary to store transactions in a bank-statement format
+
+BANK_STATEMENT_FILE = "bank_statement.txt"
+
+
+def save_bank_statement():
+    """
+    Saves the bank statement to a text file as a dictionary.
+    """
+    try:
+        with open(BANK_STATEMENT_FILE, "w") as file:
+            json.dump(bank_statement, file, indent=4)
+    except OSError as e:
+        print(f"Error saving bank statement: {e}")
+
+
+def load_bank_statement():
+    """
+    Loads the bank statement from a text file if it exists.
+    """
+    global bank_statement
+    try:
+        with open(BANK_STATEMENT_FILE, "r") as file:
+            bank_statement = json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError, OSError) as e:
+        print(f"Warning: Could not load bank statement ({e}). Using empty record.")
+        bank_statement = {}
+
+
+def add_transaction():
+    """
+    Adds a new transaction based on user input and updates the bank statement.
+    """
+    global budget
+    try:
+        date = input("Enter date (DDMMYYYY): ")
+        category = input("Enter category: ")
+        description = input("Enter description: ")
+        amount = float(input("Enter amount: ").replace("$", ""))
+        is_recurring = input("Is this a recurring monthly expense? (yes/no): ").strip().lower() == "yes"
+
+        if category not in categories:
+            print("Invalid category. Please add it first.")
+            return
+
+        if amount <= 0:
+            print("Error: Amount must be positive.")
+            return
+
+        if amount > budget:
+            print("Error: Insufficient funds! You don't have enough money for this expense.")
+            return
+
+        transaction = {
+            "date": date,
+            "amount": -amount,  # Negative amount for expenses
+            "category": category,
+            "description": description,
+            "recurrence": "monthly" if is_recurring else "one-time"
+        }
+        transactions.append(transaction)
+
+        # Store transaction in bank statement
+        bank_statement[str(len(bank_statement) + 1)] = transaction
+        save_bank_statement()
+
+        budget -= amount  # Deduct from budget
+        print("Transaction added successfully.")
+    except ValueError:
+        print("Invalid input. Please enter a valid number.")
+
+
+def view_bank_statement():
+    """
+    Displays the bank statement in a structured format.
+    """
+    load_bank_statement()
+    if not bank_statement:
+        print("No transactions recorded yet.")
+        return
+
+    print("\nBank Statement:")
+    for index, transaction in bank_statement.items():
+        print(
+            f"{index}. Date: {transaction['date']}, Amount: ${transaction['amount']}, Category: {transaction['category']}, Description: {transaction['description']}, Recurrence: {transaction['recurrence']}")
+
+
+def total_spent_on_day():
+    """
+    Calculates total spending on a specific day.
+    """
+    date = input("Enter the date (DDMMYYYY) to check spending: ")
+    total = sum(exp['amount'] for exp in bank_statement.values() if exp['date'] == date and exp['amount'] < 0)
+    print(f"Total spent on {date}: ${-total}")
+
+
+def export_transactions_to_csv(filename="transactions.csv"):
+    """
+    Exports transactions to a CSV file.
+    """
+    try:
+        with open(filename, "w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(["Date", "Amount", "Category", "Description", "Recurrence"])
+            for transaction in transactions:
+                writer.writerow(
+                    [transaction["date"], transaction["amount"], transaction["category"], transaction["description"],
+                     transaction["recurrence"]])
+        print(f"Transactions exported to {filename}")
+    except Exception as e:
+        print(f"Error exporting transactions: {e}")
+
+
+def add_money():
+    """
+    Adds money to the budget and records it in the bank statement.
+    """
+    global budget
+    try:
+        amount = float(input("Enter amount to add: ").replace("$", ""))
+        if amount <= 0:
+            print("Error: Amount must be positive.")
+            return
+
+        budget += amount
+        transaction = {
+            "date": datetime.datetime.now().strftime('%d%m%Y'),
+            "amount": amount,  # Income should be positive
+            "category": "Income",
+            "description": "Money added",
+            "recurrence": "one-time"
+        }
+        transactions.append(transaction)
+        bank_statement[len(bank_statement) + 1] = transaction
+        save_bank_statement()
+        print(f"Successfully added ${amount} to your budget. New budget: ${budget}")
+    except ValueError:
+        print("Invalid input. Please enter a valid number.")
+
+
+def money_left():
+    """
+    Calculates remaining budget after expenses.
+    """
+    total_expenses = sum(exp['amount'] for exp in transactions if exp['category'] != 'Income')
+    total_income = sum(exp['amount'] for exp in transactions if exp['category'] == 'Income')
+    remaining = total_income + total_expenses
+    print(f"Remaining budget: ${remaining}\n")
+
+
+def total_spent():
+    """
+    Calculates and prints total amount spent and total income for comparison.
+    """
+    total_expenses = sum(exp['amount'] for exp in transactions if exp['amount'] < 0)
+    total_income = sum(exp['amount'] for exp in transactions if exp['amount'] > 0)
+    print(f"Total amount spent: ${total_expenses}")
+    print(f"Total income: ${total_income}")
+    print(f"Net balance (Income - Expenses): ${total_income + total_expenses}")
+
+
+def main():
+    """
+    Main function to handle user input in a loop.
+    """
+    load_bank_statement()
+    while True:
+        print("\nExpense Tracker Menu")
+        print("1. Add Expense")
+        print("2. Add Money")
+        print("3. View Bank Statement")
+        print("4. Check Total Spending")
+        print("5. Check Spending on a Specific Day")
+        print("6. Check Remaining Budget")
+        print("7. Export Transactions to CSV")
+        print("8. Exit")
+
+        try:
+            choice = input("Choose an option: ")
+            if choice == "1":
+                add_transaction()
+            elif choice == "2":
+                add_money()
+            elif choice == "3":
+                view_bank_statement()
+            elif choice == "4":
+                total_spent()
+            elif choice == "5":
+                total_spent_on_day()
+            elif choice == "6":
+                money_left()
+            elif choice == "7":
+                export_transactions_to_csv()
+            elif choice == "8":
+                print("Exiting program. Goodbye!")
+                break
+            else:
+                print("Invalid choice. Please select a valid option.\n")
+        except OSError as e:
+            print(f"Error handling menu input: {e}")
+
+
+if __name__ == "__main__":
+    main()

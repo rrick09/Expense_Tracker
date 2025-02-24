@@ -1,0 +1,33 @@
+{
+    "transactions": {
+        "1": {
+            "date": "24022025",
+            "amount": 100.0,
+            "category": "Income",
+            "description": "Money added",
+            "recurrence": "one-time"
+        },
+        "2": {
+            "date": "23032002",
+            "amount": -23.0,
+            "category": "Food",
+            "description": "joj",
+            "recurrence": "one-time"
+        },
+        "3": {
+            "date": "09092002",
+            "amount": -20.0,
+            "category": "Food",
+            "description": "ree",
+            "recurrence": "one-time"
+        },
+        "4": {
+            "date": "24022025",
+            "amount": 200.0,
+            "category": "Income",
+            "description": "Money added",
+            "recurrence": "one-time"
+        }
+    },
+    "budget": 257.0
+}
